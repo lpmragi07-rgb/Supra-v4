@@ -1,0 +1,69 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: dark;
+    --background: 10 10 11; /* ink-950 */
+    --foreground: 247 247 248; /* ink-50 */
+  }
+
+  * {
+    @apply border-ink-800;
+  }
+
+  body {
+    @apply bg-ink-950 text-ink-100 antialiased;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  /* Títulos sempre em Serif (Playfair) para transmitir autoridade */
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-serif tracking-tight text-white;
+  }
+
+  ::selection {
+    @apply bg-brand-500/30 text-white;
+  }
+}
+
+@layer utilities {
+  /* Scrollbar refinada para painéis de dados (dark) */
+  .scrollbar-thin::-webkit-scrollbar {
+    height: 8px;
+    width: 8px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    @apply rounded-full bg-ink-700;
+  }
+  .scrollbar-thin::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+
+  /* Realce vermelho em itálico para palavras de destaque nos títulos */
+  .accent-italic {
+    @apply italic text-brand-500;
+  }
+
+  /* Pequeno rótulo com tracinho vermelho (kicker) */
+  .kicker {
+    @apply inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-ink-400;
+  }
+  .kicker::before {
+    content: "";
+    @apply h-px w-6 bg-brand-500;
+  }
+
+  /* Textura de brilho radial vermelho para fundos escuros */
+  .glow-bg {
+    background-image: radial-gradient(
+      60% 80% at 15% 10%,
+      rgb(240 27 39 / 0.16) 0%,
+      transparent 60%
+    );
+  }
+}
