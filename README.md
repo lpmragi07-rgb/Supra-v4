@@ -1,4 +1,4 @@
-# Zuckerberg Prospect
+# Supra V4
 
 Plataforma premium de **prospecção B2B via WhatsApp**. Front-end em Next.js que
 gerencia campanhas e leads, preparado para um **Worker externo** que cuidará dos

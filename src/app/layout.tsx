@@ -22,15 +22,15 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: {
-    default: "Zuckerberg Prospect — Prospecção B2B via WhatsApp",
-    template: "%s · Zuckerberg Prospect",
+    default: "Supra V4 — Prospecção B2B via WhatsApp",
+    template: "%s · Supra V4",
   },
   description:
     "Plataforma premium de prospecção B2B via WhatsApp: gerencie campanhas, importe leads e acompanhe disparos em tempo real.",
   keywords: ["prospecção", "B2B", "WhatsApp", "leads", "campanhas"],
-  authors: [{ name: "Zuckerberg Prospect" }],
+  authors: [{ name: "Supra V4" }],
   openGraph: {
-    title: "Zuckerberg Prospect — Prospecção B2B via WhatsApp",
+    title: "Supra V4 — Prospecção B2B via WhatsApp",
     description:
       "Gerencie campanhas, importe leads e acompanhe disparos em tempo real.",
     type: "website",

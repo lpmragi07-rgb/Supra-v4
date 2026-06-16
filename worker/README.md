@@ -1,4 +1,4 @@
-# Worker de Disparo — Zuckerberg Prospect
+# Worker de Disparo — Supra V4
 
 Worker **externo e independente** do front-end. Consome os leads com status
 `pending` das campanhas **ativas**, "dispara" a mensagem e atualiza o status

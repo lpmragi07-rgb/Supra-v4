@@ -20,7 +20,7 @@ export default function LoginPage() {
             <Crosshair className="h-5 w-5" />
           </span>
           <span className="font-serif text-xl font-semibold text-white">
-            Zuckerberg Prospect
+            Supra V4
           </span>
         </div>
 
@@ -47,7 +47,7 @@ export default function LoginPage() {
           </ul>
         </div>
 
-        <p className="kicker relative">Zuckerberg · Prospect</p>
+        <p className="kicker relative">Supra · V4</p>
       </div>
 
       {/* Coluna do formulário */}
@@ -59,7 +59,7 @@ export default function LoginPage() {
               <Crosshair className="h-5 w-5" />
             </span>
             <span className="font-serif text-xl font-semibold text-white">
-              Zuckerberg Prospect
+              Supra V4
             </span>
           </div>
 

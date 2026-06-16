@@ -1,5 +1,5 @@
 // =============================================================================
-// Zuckerberg Prospect — Worker de Disparo (esqueleto)
+// Supra V4 — Worker de Disparo (esqueleto)
 // =============================================================================
 // Worker EXTERNO e independente do front-end. Responsável por:
 //   1. Buscar campanhas ATIVAS e seus leads com status 'pending'.

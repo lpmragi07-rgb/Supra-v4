@@ -41,7 +41,7 @@ export function Navbar({ userEmail }: { userEmail: string | null }) {
             <Crosshair className="h-5 w-5" />
           </span>
           <span className="font-serif text-xl font-semibold tracking-tight text-white">
-            Zuckerberg<span className="text-brand-500"> Prospect</span>
+            Supra<span className="text-brand-500"> V4</span>
           </span>
         </Link>
 

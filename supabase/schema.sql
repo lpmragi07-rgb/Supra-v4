@@ -1,5 +1,5 @@
 -- =============================================================================
--- Zuckerberg Prospect — Schema do Banco de Dados (Supabase / PostgreSQL)
+-- Supra V4 — Schema do Banco de Dados (Supabase / PostgreSQL)
 -- =============================================================================
 -- Execute este arquivo no SQL Editor do Supabase
 -- (Dashboard > SQL Editor > New query > cole tudo > Run).
