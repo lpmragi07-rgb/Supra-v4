@@ -15,6 +15,7 @@
 
 import "dotenv/config";
 import { createClient } from "@supabase/supabase-js";
+import ws from "ws";
 import {
   checkConnection,
   isEvolutionConfigured,
@@ -43,6 +44,7 @@ if (!isEvolutionConfigured()) {
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
   auth: { persistSession: false },
+  realtime: { transport: ws },
 });
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));

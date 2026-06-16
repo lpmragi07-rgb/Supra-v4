@@ -29,6 +29,12 @@ export interface EvolutionQRResult {
   error?: string;
 }
 
+type ApiErrorBody = {
+  response?: { message?: string[] };
+  error?: string;
+  message?: string;
+};
+
 function evolutionHeaders(useGlobalKey = false) {
   return {
     apikey: useGlobalKey ? EVOLUTION_GLOBAL_KEY : EVOLUTION_API_KEY,
@@ -41,22 +47,52 @@ async function evolutionFetch<T>(
   options: RequestInit & { useGlobalKey?: boolean } = {}
 ): Promise<{ ok: boolean; status: number; body: T | null }> {
   const { useGlobalKey, ...fetchOptions } = options;
-  const res = await fetch(`${EVOLUTION_API_URL}${path}`, {
-    ...fetchOptions,
-    headers: {
-      ...evolutionHeaders(useGlobalKey),
-      ...(fetchOptions.headers ?? {}),
-    },
-    cache: "no-store",
-  });
 
-  let body: T | null = null;
-  const contentType = res.headers.get("content-type") ?? "";
-  if (contentType.includes("application/json")) {
-    body = (await res.json()) as T;
+  try {
+    const res = await fetch(`${EVOLUTION_API_URL}${path}`, {
+      ...fetchOptions,
+      headers: {
+        ...evolutionHeaders(useGlobalKey),
+        ...(fetchOptions.headers ?? {}),
+      },
+      cache: "no-store",
+    });
+
+    let body: T | null = null;
+    const contentType = res.headers.get("content-type") ?? "";
+    if (contentType.includes("application/json")) {
+      body = (await res.json()) as T;
+    }
+
+    return { ok: res.ok, status: res.status, body };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Falha de rede";
+    return {
+      ok: false,
+      status: 0,
+      body: { error: `Evolution API inacessível (${message}). Verifique se o Docker está rodando.` } as T,
+    };
   }
+}
 
-  return { ok: res.ok, status: res.status, body };
+function extractApiError(body: ApiErrorBody | null): string {
+  if (!body) return "Erro desconhecido na Evolution API";
+  const msg = body.response?.message?.[0] ?? body.error ?? body.message;
+  return String(msg ?? "Erro desconhecido na Evolution API");
+}
+
+function instanceExistsInList(body: unknown): boolean {
+  if (!Array.isArray(body)) return false;
+  return body.some((item) => {
+    if (!item || typeof item !== "object") return false;
+    const row = item as Record<string, unknown>;
+    const nested = row.instance as Record<string, unknown> | undefined;
+    return (
+      row.name === EVOLUTION_INSTANCE ||
+      row.instanceName === EVOLUTION_INSTANCE ||
+      nested?.instanceName === EVOLUTION_INSTANCE
+    );
+  });
 }
 
 export function isEvolutionConfigured() {
@@ -75,30 +111,32 @@ export async function getEvolutionStatus(): Promise<EvolutionStatus> {
     };
   }
 
-  const { ok, body } = await evolutionFetch<{
+  const { ok, status, body } = await evolutionFetch<{
     instance?: { state?: string };
     state?: string;
-    response?: { message?: string[] };
-    error?: string;
-    message?: string;
-  }>(`/instance/connectionState/${EVOLUTION_INSTANCE}`);
+  } & ApiErrorBody>(`/instance/connectionState/${EVOLUTION_INSTANCE}`);
+
+  // Instância ainda não criada — normal antes do primeiro QR Code
+  if (!ok && status === 404) {
+    return {
+      configured: true,
+      connected: false,
+      state: "close",
+      instance: EVOLUTION_INSTANCE,
+    };
+  }
 
   if (!ok) {
-    const message =
-      body?.response?.message?.[0] ??
-      body?.error ??
-      body?.message ??
-      "Falha ao consultar status";
     return {
       configured: true,
       connected: false,
       state: "error",
       instance: EVOLUTION_INSTANCE,
-      error: String(message),
+      error: extractApiError(body),
     };
   }
 
-  const rawState = body?.instance?.state ?? body?.state ?? "unknown";
+  const rawState = body?.instance?.state ?? body?.state ?? "close";
   const state = rawState as EvolutionConnectionState;
 
   return {
@@ -113,10 +151,14 @@ export async function getEvolutionStatus(): Promise<EvolutionStatus> {
 function extractQrBase64(body: Record<string, unknown> | null): string | null {
   if (!body) return null;
 
+  const qrcode = body.qrcode as Record<string, unknown> | undefined;
+  const qr = body.qr as Record<string, unknown> | undefined;
+
   const candidates = [
     body.base64,
-    (body.qrcode as { base64?: string } | undefined)?.base64,
-    (body.qr as { base64?: string } | undefined)?.base64,
+    qrcode?.base64,
+    qrcode?.code,
+    qr?.base64,
     body.code,
   ];
 
@@ -131,28 +173,53 @@ function extractQrBase64(body: Record<string, unknown> | null): string | null {
   return null;
 }
 
-// Garante que a instância exista antes de conectar (cria se necessário).
-async function ensureInstance() {
-  const { ok, body } = await evolutionFetch<
-    Array<{ name?: string; instance?: { instanceName?: string } }>
-  >(`/instance/fetchInstances?instanceName=${EVOLUTION_INSTANCE}`, {
+// Cria a instância WhatsApp na Evolution API (se ainda não existir).
+async function createInstance(): Promise<{
+  ok: boolean;
+  error?: string;
+  body?: Record<string, unknown> | null;
+}> {
+  const { ok, status, body } = await evolutionFetch<Record<string, unknown>>(
+    "/instance/create",
+    {
+      method: "POST",
+      useGlobalKey: true,
+      body: JSON.stringify({
+        instanceName: EVOLUTION_INSTANCE,
+        qrcode: true,
+        integration: "WHATSAPP-BAILEYS",
+      }),
+    }
+  );
+
+  // Já existe — segue para o connect
+  if (!ok && (status === 403 || status === 409)) {
+    return { ok: true, body };
+  }
+
+  if (!ok) {
+    return { ok: false, error: extractApiError(body), body };
+  }
+
+  return { ok: true, body };
+}
+
+// Garante que a instância exista antes de conectar.
+async function ensureInstance(): Promise<{ ok: boolean; error?: string }> {
+  const { ok, body } = await evolutionFetch<unknown>("/instance/fetchInstances", {
     useGlobalKey: true,
   });
 
-  if (!ok) return;
+  if (ok && instanceExistsInList(body)) {
+    return { ok: true };
+  }
 
-  const exists = Array.isArray(body) && body.length > 0;
-  if (exists) return;
+  const created = await createInstance();
+  if (!created.ok) {
+    return { ok: false, error: created.error };
+  }
 
-  await evolutionFetch("/instance/create", {
-    method: "POST",
-    useGlobalKey: true,
-    body: JSON.stringify({
-      instanceName: EVOLUTION_INSTANCE,
-      qrcode: true,
-      integration: "WHATSAPP-BAILEYS",
-    }),
-  });
+  return { ok: true };
 }
 
 // Solicita QR Code ou código de pareamento para conectar o WhatsApp.
@@ -178,7 +245,16 @@ export async function getEvolutionQR(): Promise<EvolutionQRResult> {
     };
   }
 
-  await ensureInstance();
+  const ensured = await ensureInstance();
+  if (!ensured.ok) {
+    return {
+      configured: true,
+      connected: false,
+      qrBase64: null,
+      pairingCode: null,
+      error: ensured.error ?? "Falha ao criar instância na Evolution API.",
+    };
+  }
 
   const { ok, body } = await evolutionFetch<Record<string, unknown>>(
     `/instance/connect/${EVOLUTION_INSTANCE}`
@@ -190,17 +266,29 @@ export async function getEvolutionQR(): Promise<EvolutionQRResult> {
       connected: false,
       qrBase64: null,
       pairingCode: null,
-      error: "Não foi possível gerar o QR Code. Verifique a instância na Evolution API.",
+      error: extractApiError(body),
     };
   }
 
   const pairingCode =
     typeof body?.pairingCode === "string" ? body.pairingCode : null;
+  const qrBase64 = extractQrBase64(body);
+
+  if (!qrBase64) {
+    return {
+      configured: true,
+      connected: false,
+      qrBase64: null,
+      pairingCode,
+      error:
+        "Instância criada, mas o QR Code não veio na resposta. Clique em Tentar novamente.",
+    };
+  }
 
   return {
     configured: true,
     connected: false,
-    qrBase64: extractQrBase64(body),
+    qrBase64,
     pairingCode,
   };
 }
@@ -211,13 +299,15 @@ export async function restartEvolutionInstance(): Promise<{ ok: boolean; error?:
     return { ok: false, error: "Evolution API não configurada" };
   }
 
-  const { ok, body } = await evolutionFetch<{ message?: string }>(
+  await ensureInstance();
+
+  const { ok, body } = await evolutionFetch<{ message?: string } & ApiErrorBody>(
     `/instance/restart/${EVOLUTION_INSTANCE}`,
     { method: "POST" }
   );
 
   if (!ok) {
-    return { ok: false, error: body?.message ?? "Falha ao reiniciar instância" };
+    return { ok: false, error: extractApiError(body) };
   }
 
   return { ok: true };
@@ -229,13 +319,13 @@ export async function logoutEvolutionInstance(): Promise<{ ok: boolean; error?: 
     return { ok: false, error: "Evolution API não configurada" };
   }
 
-  const { ok, body } = await evolutionFetch<{ message?: string }>(
+  const { ok, body } = await evolutionFetch<{ message?: string } & ApiErrorBody>(
     `/instance/logout/${EVOLUTION_INSTANCE}`,
     { method: "DELETE" }
   );
 
   if (!ok) {
-    return { ok: false, error: body?.message ?? "Falha ao desconectar" };
+    return { ok: false, error: extractApiError(body) };
   }
 
   return { ok: true };

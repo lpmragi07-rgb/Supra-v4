@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { CampaignsTable } from "@/components/campaigns/CampaignsTable";
+import { SetupGuide } from "@/components/campaigns/SetupGuide";
 import { getCampaignsData } from "@/lib/queries";
 
 export const dynamic = "force-dynamic";
@@ -37,6 +38,8 @@ export default async function CampaignsPage() {
           gerenciar suas campanhas.
         </div>
       )}
+
+      <SetupGuide />
 
       <CampaignsTable
         initialCampaigns={campaigns}
