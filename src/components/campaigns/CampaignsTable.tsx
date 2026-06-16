@@ -135,6 +135,21 @@ export function CampaignsTable({
     };
   };
 
+  const getCampaignAction = (status: CampaignStatus) => {
+    if (status === "active") {
+      return { enabled: true, label: "Pausar", icon: "pause" as const };
+    }
+    if (status === "completed") {
+      return { enabled: true, label: "Reiniciar", icon: "play" as const };
+    }
+    // draft, paused e demais estados iniciáveis
+    return {
+      enabled: true,
+      label: status === "paused" ? "Retomar" : "Iniciar",
+      icon: "play" as const,
+    };
+  };
+
   const toggleStatus = (id: string, current: CampaignStatus) => {
     // Atualização otimista (UI responde imediatamente)
     const next: CampaignStatus = current === "active" ? "paused" : "active";
@@ -156,13 +171,17 @@ export function CampaignsTable({
           description: result.error ?? "Tente novamente.",
         });
       } else {
+        const started = next === "active";
         toast({
           variant: "success",
-          title: next === "active" ? "Campanha iniciada" : "Campanha pausada",
-          description:
-            next === "active"
-              ? "Os disparos serão processados pelo worker."
-              : "Os disparos foram pausados.",
+          title: started
+            ? current === "completed"
+              ? "Campanha reiniciada"
+              : "Campanha iniciada"
+            : "Campanha pausada",
+          description: started
+            ? "Os disparos serão processados pelo worker."
+            : "Os disparos foram pausados.",
         });
       }
       setPendingId(null);
@@ -251,7 +270,7 @@ export function CampaignsTable({
             : 0;
           const isExpanded = expandedId === c.id;
           const leads = leadsMap[c.id] ?? [];
-          const canToggle = c.status === "active" || c.status === "paused";
+          const action = getCampaignAction(c.status);
           const isRowPending = isPending && pendingId === c.id;
 
           return (
@@ -292,27 +311,24 @@ export function CampaignsTable({
                   <button
                     type="button"
                     onClick={() => toggleStatus(c.id, c.status)}
-                    disabled={!canToggle || isRowPending}
+                    disabled={!action.enabled || isRowPending}
                     className={cn(
-                      "inline-flex h-9 items-center gap-1.5 rounded-xl px-3 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40",
-                      c.status === "active"
-                        ? "bg-amber-500/10 text-amber-400 hover:bg-amber-500/20"
-                        : "bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20"
+                      "inline-flex h-9 items-center gap-1.5 rounded-xl px-3 text-sm font-medium transition-colors",
+                      !action.enabled || isRowPending
+                        ? "cursor-not-allowed bg-ink-800 text-ink-500 opacity-50"
+                        : c.status === "active"
+                          ? "bg-amber-500/15 text-amber-300 hover:bg-amber-500/25"
+                          : "bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/25"
                     )}
-                    title={
-                      !canToggle
-                        ? "Disponível apenas para campanhas ativas ou pausadas"
-                        : undefined
-                    }
                   >
                     {isRowPending ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : c.status === "active" ? (
+                    ) : action.icon === "pause" ? (
                       <Pause className="h-4 w-4" />
                     ) : (
                       <Play className="h-4 w-4" />
                     )}
-                    {c.status === "active" ? "Pausar" : "Iniciar"}
+                    {action.label}
                   </button>
 
                   <button

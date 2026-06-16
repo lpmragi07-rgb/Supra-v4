@@ -1,46 +1,59 @@
 # Worker de Disparo — Supra V4
 
 Worker **externo e independente** do front-end. Consome os leads com status
-`pending` das campanhas **ativas**, "dispara" a mensagem e atualiza o status
-para `sent` ou `failed`. O front-end reflete cada mudança em tempo real
-(Supabase Realtime).
+`pending` das campanhas **ativas**, envia mensagens via **Evolution API** e
+atualiza o status para `sent` ou `failed`. O front-end reflete cada mudança em
+tempo real (Supabase Realtime).
 
-> O envio de WhatsApp está **simulado** na função `sendWhatsAppMessage`
-> (`index.mjs`). Substitua-a pela integração real (WhatsApp Cloud API, Z-API,
-> Evolution API, etc.).
+## Pré-requisitos
+
+1. **Evolution API** rodando (Docker, Easypanel, Railway, VPS, etc.)
+2. WhatsApp **conectado** via QR Code em `/whatsapp` no app
+3. Variáveis preenchidas no `.env` do worker
 
 ## Como rodar
 
 ```bash
 cd worker
-cp .env.example .env     # preencha SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY
+cp .env.example .env     # preencha Supabase + Evolution API
 npm install
 npm start
 ```
 
-## Como funciona
-
-1. A cada ciclo, busca campanhas com `status = 'active'`.
-2. Para cada campanha, pega um lote (`BATCH_SIZE`) de leads `pending`.
-3. Dispara cada um e grava `sent`/`failed` (+ `error_message`).
-4. Quando não há mais pendentes, marca a campanha como `completed`.
-5. Aguarda `POLL_INTERVAL_MS` e repete (Ctrl+C encerra com segurança).
-
 ## Variáveis de ambiente
 
-| Variável                    | Padrão | Descrição                                  |
-| --------------------------- | ------ | ------------------------------------------ |
-| `SUPABASE_URL`              | —      | URL do projeto Supabase                    |
-| `SUPABASE_SERVICE_ROLE_KEY` | —      | Chave service_role (ignora RLS — segredo!) |
-| `BATCH_SIZE`                | `10`   | Leads processados por ciclo                |
-| `POLL_INTERVAL_MS`          | `5000` | Intervalo entre ciclos (ms)                |
-| `SEND_DELAY_MS`             | `800`  | Latência simulada por disparo (ms)         |
-| `FAILURE_RATE`              | `0.1`  | Taxa de falha simulada (0–1)               |
+| Variável | Obrigatório | Descrição |
+| --- | --- | --- |
+| `SUPABASE_URL` | Sim | URL do projeto Supabase |
+| `SUPABASE_SERVICE_ROLE_KEY` | Sim | Chave service_role (segredo!) |
+| `EVOLUTION_API_URL` | Sim | URL base da Evolution API |
+| `EVOLUTION_API_KEY` | Sim | API Key da instância |
+| `EVOLUTION_INSTANCE` | Sim | Nome da instância (ex: `supra-v4`) |
+| `WHATSAPP_MESSAGE_TEMPLATE` | Não | Template com `{{empresa}}` e `{{telefone}}` |
+| `BATCH_SIZE` | Não | Leads por ciclo (padrão: 5) |
+| `POLL_INTERVAL_MS` | Não | Intervalo entre ciclos (padrão: 5000) |
+| `SEND_DELAY_MS` | Não | Delay entre mensagens (padrão: 1200) |
 
-## Fluxo de teste ponta a ponta
+## Como funciona
 
-1. No app, faça login e **importe** uma lista de leads (cria a campanha).
-2. Na página **Campanhas**, clique em **Iniciar** (status → `active`).
-3. Rode o worker (`npm start`).
-4. Abra **Campanhas** e expanda a campanha: os leads mudam de `pending` para
-   `sent`/`failed` **ao vivo**, com o selo "Ao vivo" no cabeçalho.
+1. Verifica se o WhatsApp está conectado (`connectionState === open`).
+2. Busca campanhas com `status = 'active'`.
+3. Para cada campanha, pega um lote (`BATCH_SIZE`) de leads `pending`.
+4. Envia via `POST /message/sendText/{instance}` na Evolution API.
+5. Grava `sent`/`failed` (+ `error_message`) no Supabase.
+6. Quando não há mais pendentes, marca a campanha como `completed`.
+
+## Fluxo completo
+
+1. Configure a Evolution API e preencha `.env.local` no app + `.env` no worker.
+2. Acesse **WhatsApp** no app e escaneie o QR Code.
+3. Importe leads em **Upload de Lista**.
+4. Em **Campanhas**, clique em **Iniciar** (rascunho → ativa).
+5. Rode o worker (`npm start`).
+6. Acompanhe os leads mudando de `pending` → `sent` em tempo real.
+
+## Dicas anti-ban
+
+- Use `BATCH_SIZE=3` a `5` e `SEND_DELAY_MS=1200` ou mais.
+- Evite disparos em massa para números frios sem opt-in.
+- Monitore falhas na tabela de leads.

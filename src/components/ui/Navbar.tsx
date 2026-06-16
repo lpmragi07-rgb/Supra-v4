@@ -7,6 +7,7 @@ import {
   LayoutDashboard,
   UploadCloud,
   Megaphone,
+  MessageCircle,
   Menu,
   X,
   LogOut,
@@ -19,6 +20,7 @@ const navItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/upload", label: "Upload de Lista", icon: UploadCloud },
   { href: "/campaigns", label: "Campanhas", icon: Megaphone },
+  { href: "/whatsapp", label: "WhatsApp", icon: MessageCircle },
 ];
 
 export function Navbar({ userEmail }: { userEmail: string | null }) {

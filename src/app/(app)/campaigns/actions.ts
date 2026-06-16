@@ -10,7 +10,7 @@ export interface ActionResult {
   error?: string;
 }
 
-// Alterna o status de uma campanha entre 'active' e 'paused'.
+// Alterna o status de uma campanha: draft/paused → active, active → paused.
 // (RLS garante que o usuário só altere as próprias campanhas.)
 export async function toggleCampaignStatus(
   campaignId: string,
@@ -21,7 +21,8 @@ export async function toggleCampaignStatus(
     return { ok: true };
   }
 
-  const next: CampaignStatus = current === "active" ? "paused" : "active";
+  const next: CampaignStatus =
+    current === "active" ? "paused" : "active";
 
   const supabase = createClient();
   const { error } = await supabase
