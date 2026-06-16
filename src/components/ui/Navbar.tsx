@@ -9,11 +9,11 @@ import {
   Megaphone,
   Menu,
   X,
-  Crosshair,
   LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { signout } from "@/app/login/actions";
+import { Logo } from "@/components/ui/Logo";
 
 const navItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -34,15 +34,9 @@ export function Navbar({ userEmail }: { userEmail: string | null }) {
         {/* Marca */}
         <Link
           href="/"
-          className="flex items-center gap-2.5"
           onClick={() => setMobileOpen(false)}
         >
-          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-600 text-white shadow-glow">
-            <Crosshair className="h-5 w-5" />
-          </span>
-          <span className="font-serif text-xl font-semibold tracking-tight text-white">
-            Supra<span className="text-brand-500"> V4</span>
-          </span>
+          <Logo size={36} withName priority />
         </Link>
 
         {/* Navegação desktop */}

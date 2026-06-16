@@ -1,6 +1,7 @@
-import { Crosshair, UploadCloud, Filter, GitBranch } from "lucide-react";
+import { UploadCloud, Filter, GitBranch } from "lucide-react";
 import { LoginForm } from "@/components/auth/LoginForm";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { Logo } from "@/components/ui/Logo";
 
 const features = [
   { icon: UploadCloud, label: "Importação de leads via CSV em segundos" },
@@ -15,14 +16,7 @@ export default function LoginPage() {
     <div className="grid min-h-screen bg-ink-950 lg:grid-cols-2">
       {/* Coluna de branding (visível no desktop) */}
       <div className="glow-bg relative hidden flex-col justify-between overflow-hidden border-r border-ink-800 bg-ink-950 p-12 lg:flex">
-        <div className="relative flex items-center gap-2.5">
-          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-600 text-white shadow-glow">
-            <Crosshair className="h-5 w-5" />
-          </span>
-          <span className="font-serif text-xl font-semibold text-white">
-            Supra V4
-          </span>
-        </div>
+        <Logo size={36} withName priority className="relative" />
 
         <div className="relative max-w-lg">
           <span className="kicker mb-6">Prospecção · WhatsApp</span>
@@ -54,14 +48,7 @@ export default function LoginPage() {
       <div className="flex items-center justify-center bg-ink-900 px-4 py-12 sm:px-8">
         <div className="w-full max-w-sm">
           {/* Marca (mobile) */}
-          <div className="mb-8 flex items-center gap-2.5 lg:hidden">
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-600 text-white">
-              <Crosshair className="h-5 w-5" />
-            </span>
-            <span className="font-serif text-xl font-semibold text-white">
-              Supra V4
-            </span>
-          </div>
+          <Logo size={36} withName className="mb-8 lg:hidden" />
 
           <span className="kicker mb-5">Bem-vindo de volta</span>
           <h2 className="font-serif text-4xl font-semibold text-white">
