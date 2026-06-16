@@ -55,6 +55,28 @@ services:
       - evolution_instances:/evolution/instances
       - evolution_store:/evolution/store
 
+  # Worker de disparo — processa campanhas ativas automaticamente
+  worker:
+    image: node:20-alpine
+    container_name: supra-worker
+    restart: unless-stopped
+    working_dir: /app
+    volumes:
+      - ../worker:/app
+    environment:
+      SUPABASE_URL: ${SUPABASE_URL}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
+      EVOLUTION_API_URL: http://evolution-api:8080
+      EVOLUTION_API_KEY: sua-chave-secreta
+      EVOLUTION_INSTANCE: supra-v4
+      BATCH_SIZE: "5"
+      POLL_INTERVAL_MS: "5000"
+      SEND_DELAY_MS: "1200"
+      WHATSAPP_MESSAGE_TEMPLATE: "Olá! Somos da Supra V4. Identificamos que a {{empresa}} pode se beneficiar das nossas soluções. Podemos conversar?"
+    command: sh -c "npm install --omit=dev && node index.mjs"
+    depends_on:
+      - evolution-api
+
 volumes:
   evolution_postgres:
   evolution_instances:

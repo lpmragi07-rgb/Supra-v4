@@ -25,7 +25,9 @@ import type {
   Lead,
 } from "@/lib/supabase/types";
 import { toggleCampaignStatus } from "@/app/(app)/campaigns/actions";
+import { fetchWhatsAppStatus } from "@/app/(app)/whatsapp/actions";
 import { useLeadsRealtime } from "./useLeadsRealtime";
+import { WhatsAppConnectModal } from "./WhatsAppConnectModal";
 
 type StatusFilter = "all" | CampaignStatus;
 
@@ -71,6 +73,13 @@ export function CampaignsTable({
   // Filtros de listagem
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+
+  // Modal de conexão WhatsApp ao iniciar campanha
+  const [connectModal, setConnectModal] = useState<{
+    campaignId: string;
+    campaignName: string;
+    currentStatus: CampaignStatus;
+  } | null>(null);
 
   // Leads sincronizados em tempo real (atualizam status ao vivo).
   const { leadsMap, isLive } = useLeadsRealtime(leadsByCampaign, realtimeEnabled);
@@ -150,8 +159,7 @@ export function CampaignsTable({
     };
   };
 
-  const toggleStatus = (id: string, current: CampaignStatus) => {
-    // Atualização otimista (UI responde imediatamente)
+  const applyStatusChange = (id: string, current: CampaignStatus) => {
     const next: CampaignStatus = current === "active" ? "paused" : "active";
     setCampaigns((prev) =>
       prev.map((c) => (c.id === id ? { ...c, status: next } : c))
@@ -161,7 +169,6 @@ export function CampaignsTable({
     startTransition(async () => {
       const result = await toggleCampaignStatus(id, current);
       if (!result.ok) {
-        // Reverte em caso de erro
         setCampaigns((prev) =>
           prev.map((c) => (c.id === id ? { ...c, status: current } : c))
         );
@@ -180,12 +187,54 @@ export function CampaignsTable({
               : "Campanha iniciada"
             : "Campanha pausada",
           description: started
-            ? "Os disparos serão processados pelo worker."
+            ? "Disparos em andamento. Acompanhe o progresso abaixo."
             : "Os disparos foram pausados.",
         });
       }
       setPendingId(null);
     });
+  };
+
+  // Iniciar/pausar campanha — verifica WhatsApp antes de ativar
+  const handleCampaignAction = async (
+    id: string,
+    name: string,
+    current: CampaignStatus
+  ) => {
+    // Pausar não precisa de WhatsApp
+    if (current === "active") {
+      applyStatusChange(id, current);
+      return;
+    }
+
+    setPendingId(id);
+    const whatsapp = await fetchWhatsAppStatus();
+    setPendingId(null);
+
+    if (!whatsapp.configured) {
+      toast({
+        variant: "error",
+        title: "WhatsApp não configurado",
+        description:
+          "Configure EVOLUTION_API_URL no servidor. Veja evolution/README.md.",
+      });
+      return;
+    }
+
+    if (whatsapp.connected) {
+      applyStatusChange(id, current);
+      return;
+    }
+
+    // Abre modal com QR Code
+    setConnectModal({ campaignId: id, campaignName: name, currentStatus: current });
+  };
+
+  const handleWhatsAppConnected = () => {
+    if (!connectModal) return;
+    const { campaignId, currentStatus } = connectModal;
+    setConnectModal(null);
+    applyStatusChange(campaignId, currentStatus);
   };
 
   const toggleExpand = (id: string) =>
@@ -310,7 +359,7 @@ export function CampaignsTable({
                 <div className="flex items-center justify-start gap-2 lg:justify-end">
                   <button
                     type="button"
-                    onClick={() => toggleStatus(c.id, c.status)}
+                    onClick={() => handleCampaignAction(c.id, c.name, c.status)}
                     disabled={!action.enabled || isRowPending}
                     className={cn(
                       "inline-flex h-9 items-center gap-1.5 rounded-xl px-3 text-sm font-medium transition-colors",
@@ -428,6 +477,13 @@ export function CampaignsTable({
           </ul>
         )}
       </div>
+
+      <WhatsAppConnectModal
+        open={connectModal !== null}
+        campaignName={connectModal?.campaignName ?? ""}
+        onClose={() => setConnectModal(null)}
+        onConnected={handleWhatsAppConnected}
+      />
     </div>
   );
 }
