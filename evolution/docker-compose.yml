@@ -75,7 +75,7 @@ services:
       BATCH_SIZE: "5"
       POLL_INTERVAL_MS: "5000"
       SEND_DELAY_MS: "1200"
-      WHATSAPP_MESSAGE_TEMPLATE: "Olá! Somos da Supra V4. Identificamos que a {{empresa}} pode se beneficiar das nossas soluções. Podemos conversar?"
+      WHATSAPP_MESSAGE_TEMPLATE: "Olá! Somos da V4 Company. Identificamos que a {{empresa}} pode se beneficiar das nossas soluções de alavancar resultados finaceiros. Podemos conversar?"
     command: sh -c "npm install --omit=dev && node index.mjs"
     depends_on:
       - evolution-api

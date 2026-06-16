@@ -110,8 +110,8 @@ export function WhatsAppConnectPanel({
         <CardHeader>
           <CardTitle>Evolution API não configurada</CardTitle>
           <CardDescription>
-            Adicione as variáveis no <code className="text-ink-300">.env.local</code> e
-            reinicie o servidor.
+            Configure as variáveis na Vercel (Settings → Environment Variables)
+            e faça redeploy.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-2 font-mono text-xs text-ink-400">

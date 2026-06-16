@@ -5,7 +5,7 @@ const EVOLUTION_API_KEY = process.env.EVOLUTION_API_KEY ?? "";
 const SEND_DELAY_MS = Number(process.env.SEND_DELAY_MS ?? 1200);
 
 const DEFAULT_TEMPLATE =
-  "Olá! Somos da Supra V4. Identificamos que a {{empresa}} pode se beneficiar das nossas soluções. Podemos conversar?";
+  "Olá! Somos da V4 Company. Identificamos que a {{empresa}} pode se beneficiar das nossas soluções de alavancar resultados finaceiros. Podemos conversar?";
 
 export function isEvolutionConfigured() {
   return Boolean(EVOLUTION_API_URL && EVOLUTION_API_KEY);

@@ -13,6 +13,7 @@ import {
   Megaphone,
   Radio,
   Search,
+  Trash2,
 } from "lucide-react";
 import { CampaignStatusBadge, LeadStatusBadge } from "@/components/ui/Badge";
 import { useToast } from "@/components/ui/Toast";
@@ -24,7 +25,7 @@ import type {
   CampaignWithCount,
   Lead,
 } from "@/lib/supabase/types";
-import { toggleCampaignStatus } from "@/app/(app)/campaigns/actions";
+import { toggleCampaignStatus, deleteCampaign } from "@/app/(app)/campaigns/actions";
 import { fetchWhatsAppStatus } from "@/app/(app)/whatsapp/actions";
 import { useLeadsRealtime } from "./useLeadsRealtime";
 import { WhatsAppConnectModal } from "./WhatsAppConnectModal";
@@ -68,6 +69,7 @@ export function CampaignsTable({
   const [campaigns, setCampaigns] = useState(initialCampaigns);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [pendingId, setPendingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   // Filtros de listagem
@@ -240,6 +242,38 @@ export function CampaignsTable({
   const toggleExpand = (id: string) =>
     setExpandedId((prev) => (prev === id ? null : id));
 
+  const handleDelete = (id: string, name: string) => {
+    const confirmed = window.confirm(
+      `Apagar a campanha "${name}"?\n\nTodos os leads vinculados serão removidos. Esta ação não pode ser desfeita.`
+    );
+    if (!confirmed) return;
+
+    setDeletingId(id);
+
+    startTransition(async () => {
+      const result = await deleteCampaign(id);
+      if (!result.ok) {
+        toast({
+          variant: "error",
+          title: "Não foi possível apagar",
+          description: result.error ?? "Tente novamente.",
+        });
+        setDeletingId(null);
+        return;
+      }
+
+      setCampaigns((prev) => prev.filter((c) => c.id !== id));
+      if (expandedId === id) setExpandedId(null);
+      if (connectModal?.campaignId === id) setConnectModal(null);
+      toast({
+        variant: "success",
+        title: "Campanha apagada",
+        description: `"${name}" foi removida.`,
+      });
+      setDeletingId(null);
+    });
+  };
+
   if (campaigns.length === 0) {
     return (
       <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-ink-700 bg-ink-900 px-6 py-16 text-center">
@@ -321,6 +355,7 @@ export function CampaignsTable({
           const leads = leadsMap[c.id] ?? [];
           const action = getCampaignAction(c.status);
           const isRowPending = isPending && pendingId === c.id;
+          const isRowDeleting = isPending && deletingId === c.id;
 
           return (
             <li key={c.id} className="transition-colors hover:bg-ink-800/40">
@@ -360,10 +395,10 @@ export function CampaignsTable({
                   <button
                     type="button"
                     onClick={() => handleCampaignAction(c.id, c.name, c.status)}
-                    disabled={!action.enabled || isRowPending}
+                    disabled={!action.enabled || isRowPending || isRowDeleting}
                     className={cn(
                       "inline-flex h-9 items-center gap-1.5 rounded-xl px-3 text-sm font-medium transition-colors",
-                      !action.enabled || isRowPending
+                      !action.enabled || isRowPending || isRowDeleting
                         ? "cursor-not-allowed bg-ink-800 text-ink-500 opacity-50"
                         : c.status === "active"
                           ? "bg-amber-500/15 text-amber-300 hover:bg-amber-500/25"
@@ -383,8 +418,9 @@ export function CampaignsTable({
                   <button
                     type="button"
                     onClick={() => toggleExpand(c.id)}
+                    disabled={isRowDeleting}
                     aria-expanded={isExpanded}
-                    className="inline-flex h-9 items-center gap-1.5 rounded-xl px-3 text-sm font-medium text-ink-300 transition-colors hover:bg-ink-800 hover:text-white"
+                    className="inline-flex h-9 items-center gap-1.5 rounded-xl px-3 text-sm font-medium text-ink-300 transition-colors hover:bg-ink-800 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     Leads
                     <ChevronDown
@@ -393,6 +429,20 @@ export function CampaignsTable({
                         isExpanded && "rotate-180"
                       )}
                     />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(c.id, c.name)}
+                    disabled={isRowPending || isRowDeleting}
+                    aria-label={`Apagar campanha ${c.name}`}
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-ink-400 transition-colors hover:bg-brand-500/15 hover:text-brand-400 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {isRowDeleting ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Trash2 className="h-4 w-4" />
+                    )}
                   </button>
                 </div>
               </div>

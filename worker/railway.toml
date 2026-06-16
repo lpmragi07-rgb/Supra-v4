@@ -1,0 +1,10 @@
+# Evita que o Railway rode `npm run build` do Next.js na raiz do monorepo.
+# Só funciona se Root Directory = worker (Settings → Source).
+
+[build]
+builder = "NIXPACKS"
+buildCommand = "npm ci --omit=dev"
+
+[deploy]
+startCommand = "node index.mjs"
+restartPolicyType = "ON_FAILURE"

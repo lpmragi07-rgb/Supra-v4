@@ -38,3 +38,21 @@ export async function toggleCampaignStatus(
   revalidatePath("/");
   return { ok: true };
 }
+
+// Remove campanha e leads vinculados (cascade no banco).
+export async function deleteCampaign(campaignId: string): Promise<ActionResult> {
+  if (!isSupabaseConfigured()) {
+    return { ok: true };
+  }
+
+  const supabase = createClient();
+  const { error } = await supabase.from("campaigns").delete().eq("id", campaignId);
+
+  if (error) {
+    return { ok: false, error: error.message };
+  }
+
+  revalidatePath("/campaigns");
+  revalidatePath("/");
+  return { ok: true };
+}

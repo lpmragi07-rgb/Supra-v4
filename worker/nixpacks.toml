@@ -1,0 +1,9 @@
+# Railway/Nixpacks — deploy apenas do worker (sem build Next.js)
+[phases.setup]
+nixPkgs = ["nodejs_22"]
+
+[phases.install]
+cmds = ["npm ci --omit=dev"]
+
+[start]
+cmd = "node index.mjs"

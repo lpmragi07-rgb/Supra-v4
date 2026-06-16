@@ -1,7 +1,8 @@
 // Cliente Evolution API — multi-tenant (uma instância por operador).
 
 const EVOLUTION_API_URL = (process.env.EVOLUTION_API_URL ?? "").replace(/\/$/, "");
-const EVOLUTION_API_KEY = process.env.EVOLUTION_API_KEY ?? "";
+const EVOLUTION_API_KEY =
+  process.env.EVOLUTION_API_KEY ?? process.env.AUTHENTICATION_API_KEY ?? "";
 const EVOLUTION_GLOBAL_KEY = process.env.EVOLUTION_GLOBAL_KEY ?? EVOLUTION_API_KEY;
 
 export type EvolutionConnectionState =

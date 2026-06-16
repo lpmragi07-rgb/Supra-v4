@@ -56,14 +56,20 @@ docker compose up -d
 5. Configure DNS/reverse proxy apontando `https://evo.seudominio.com` → porta `8080`
 6. Teste: `curl -H "apikey: sua-chave" https://evo.seudominio.com/instance/fetchInstances`
 
-### Opção B — Railway
+### Worker no Railway (GitHub)
 
-1. Novo projeto → **Deploy from GitHub**
-2. Root directory: `evolution`
-3. Use o `docker-compose.yml` ou deploy só da imagem `evoapicloud/evolution-api:v2.3.7`
-4. Adicione Postgres + Redis (plugins Railway) ou use o compose completo
-5. Variáveis: `SERVER_URL`, `AUTHENTICATION_API_KEY`, `DATABASE_*`, `CACHE_REDIS_*`
-6. Worker: serviço separado com root `worker`, comando `node index.mjs`
+Se o deploy crashar com `Cannot find module '/app/index.mjs'`, o **Root Directory**
+não está apontando para `worker`.
+
+1. Serviço Worker → **Settings** → **Source** → **Root Directory** → `worker`
+2. **Start Command:** `node index.mjs` (ou `npm start`)
+3. **Variables:** Supabase + `EVOLUTION_API_URL` + `EVOLUTION_API_KEY`
+
+**Alternativa** (sem mudar Root Directory):
+
+```
+cd worker && npm install --omit=dev && node index.mjs
+```
 
 ---
 
