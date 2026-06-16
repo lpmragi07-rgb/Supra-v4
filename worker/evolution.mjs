@@ -1,18 +1,16 @@
-// Cliente Evolution API v2 — envio de mensagens e verificação de conexão.
+// Cliente Evolution API v2 — multi-tenant (instância por operador).
 
 const EVOLUTION_API_URL = (process.env.EVOLUTION_API_URL ?? "").replace(/\/$/, "");
 const EVOLUTION_API_KEY = process.env.EVOLUTION_API_KEY ?? "";
-const EVOLUTION_INSTANCE = process.env.EVOLUTION_INSTANCE ?? "supra-v4";
 const SEND_DELAY_MS = Number(process.env.SEND_DELAY_MS ?? 1200);
 
 const DEFAULT_TEMPLATE =
   "Olá! Somos da Supra V4. Identificamos que a {{empresa}} pode se beneficiar das nossas soluções. Podemos conversar?";
 
 export function isEvolutionConfigured() {
-  return Boolean(EVOLUTION_API_URL && EVOLUTION_API_KEY && EVOLUTION_INSTANCE);
+  return Boolean(EVOLUTION_API_URL && EVOLUTION_API_KEY);
 }
 
-// Normaliza telefone para o formato internacional exigido pela Evolution (somente dígitos).
 export function normalizePhone(raw) {
   const digits = String(raw).replace(/\D/g, "");
   if (!digits) return null;
@@ -22,7 +20,6 @@ export function normalizePhone(raw) {
   return null;
 }
 
-// Monta a mensagem substituindo variáveis do template.
 export function buildMessage(lead, template = process.env.WHATSAPP_MESSAGE_TEMPLATE) {
   const text = (template ?? DEFAULT_TEMPLATE).trim();
   return text
@@ -55,14 +52,17 @@ async function evolutionFetch(path, options = {}) {
   return { ok: res.ok, status: res.status, body };
 }
 
-// Verifica se a instância está conectada (state === "open").
-export async function checkConnection() {
+export async function checkConnection(instanceName) {
   if (!isEvolutionConfigured()) {
     return { connected: false, state: "not_configured", error: "Evolution API não configurada" };
   }
 
+  if (!instanceName) {
+    return { connected: false, state: "error", error: "Instância WhatsApp não definida" };
+  }
+
   const { ok, body } = await evolutionFetch(
-    `/instance/connectionState/${EVOLUTION_INSTANCE}`
+    `/instance/connectionState/${instanceName}`
   );
 
   if (!ok) {
@@ -71,19 +71,18 @@ export async function checkConnection() {
       body?.error ??
       body?.message ??
       "Falha ao consultar status da instância";
-    return { connected: false, state: "error", error: String(message) };
+    return { connected: false, state: "error", error: String(message), instance: instanceName };
   }
 
   const state = body?.instance?.state ?? body?.state ?? "unknown";
   return {
     connected: state === "open",
     state,
-    instance: EVOLUTION_INSTANCE,
+    instance: instanceName,
   };
 }
 
-// Envia mensagem de texto via Evolution API.
-export async function sendWhatsAppMessage(lead) {
+export async function sendWhatsAppMessage(lead, instanceName) {
   if (!isEvolutionConfigured()) {
     return { ok: false, error: "Evolution API não configurada no worker (.env)" };
   }
@@ -93,7 +92,7 @@ export async function sendWhatsAppMessage(lead) {
     return { ok: false, error: "Telefone inválido — use DDD + número com código do país" };
   }
 
-  const connection = await checkConnection();
+  const connection = await checkConnection(instanceName);
   if (!connection.connected) {
     return {
       ok: false,
@@ -103,7 +102,7 @@ export async function sendWhatsAppMessage(lead) {
 
   const text = buildMessage(lead);
   const { ok, status, body } = await evolutionFetch(
-    `/message/sendText/${EVOLUTION_INSTANCE}`,
+    `/message/sendText/${instanceName}`,
     {
       method: "POST",
       body: JSON.stringify({

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { MessageCircle } from "lucide-react";
 import { WhatsAppConnectPanel } from "@/components/whatsapp/WhatsAppConnectPanel";
-import { getEvolutionQR, getEvolutionStatus } from "@/lib/evolution";
+import { fetchWhatsAppQR, fetchWhatsAppStatus } from "./actions";
 
 export const metadata: Metadata = {
   title: "WhatsApp",
@@ -9,8 +9,8 @@ export const metadata: Metadata = {
 
 export default async function WhatsAppPage() {
   const [status, qr] = await Promise.all([
-    getEvolutionStatus(),
-    getEvolutionQR(),
+    fetchWhatsAppStatus(),
+    fetchWhatsAppQR(),
   ]);
 
   return (
@@ -62,7 +62,7 @@ export default async function WhatsAppPage() {
             <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-500/10 text-xs font-bold text-brand-400">
               4
             </span>
-            Rode o worker: <code className="rounded bg-ink-800 px-1.5 py-0.5 font-mono text-xs text-ink-200">cd worker && npm start</code>
+            O worker na nuvem envia as mensagens automaticamente — cada operador usa seu próprio WhatsApp.
           </li>
         </ol>
       </section>

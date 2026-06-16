@@ -49,6 +49,13 @@ export interface CampaignMetrics {
   pending_count: number;
 }
 
+export interface WhatsAppConnection {
+  user_id: string;
+  instance_name: string;
+  created_at: string;
+  updated_at: string;
+}
+
 // Tipagem do schema para o supabase-js (uso opcional, garante autocomplete)
 export interface Database {
   public: {
@@ -65,6 +72,14 @@ export interface Database {
         Row: Lead;
         Insert: LeadInsert & { id?: string; created_at?: string };
         Update: Partial<Omit<Lead, "id" | "campaign_id" | "created_at">>;
+      };
+      whatsapp_connections: {
+        Row: WhatsAppConnection;
+        Insert: Omit<WhatsAppConnection, "created_at" | "updated_at"> & {
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Pick<WhatsAppConnection, "instance_name" | "updated_at">>;
       };
     };
     Views: {

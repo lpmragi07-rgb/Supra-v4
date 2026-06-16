@@ -1,16 +1,5 @@
 // =============================================================================
-// Supra V4 — Worker de Disparo (Evolution API)
-// =============================================================================
-// Worker EXTERNO e independente do front-end. Responsável por:
-//   1. Buscar campanhas ATIVAS e seus leads com status 'pending'.
-//   2. Disparar mensagens via Evolution API e atualizar status do lead.
-//   3. Concluir a campanha quando não houver mais leads pendentes.
-//
-// Uso:
-//   cd worker
-//   cp .env.example .env
-//   npm install
-//   npm start
+// Supra V4 — Worker de Disparo (Evolution API) — multi-operador
 // =============================================================================
 
 import "dotenv/config";
@@ -37,7 +26,7 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
 
 if (!isEvolutionConfigured()) {
   console.error(
-    "[worker] Faltam variáveis da Evolution API: EVOLUTION_API_URL, EVOLUTION_API_KEY, EVOLUTION_INSTANCE."
+    "[worker] Faltam variáveis da Evolution API: EVOLUTION_API_URL, EVOLUTION_API_KEY."
   );
   process.exit(1);
 }
@@ -51,10 +40,34 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const log = (...args) =>
   console.log(`[worker ${new Date().toISOString()}]`, ...args);
 
-let whatsappConnected = false;
+// Cache de instância por operador (evita consultas repetidas ao Supabase)
+const instanceCache = new Map();
 
-async function processLead(lead) {
-  const result = await sendWhatsAppMessage(lead);
+async function getInstanceForUser(userId) {
+  if (instanceCache.has(userId)) {
+    return instanceCache.get(userId);
+  }
+
+  const { data, error } = await supabase
+    .from("whatsapp_connections")
+    .select("instance_name")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (error) {
+    log(`Erro ao buscar instância do operador ${userId}:`, error.message);
+    return null;
+  }
+
+  const instanceName = data?.instance_name ?? null;
+  if (instanceName) {
+    instanceCache.set(userId, instanceName);
+  }
+  return instanceName;
+}
+
+async function processLead(lead, instanceName) {
+  const result = await sendWhatsAppMessage(lead, instanceName);
 
   const { error } = await supabase
     .from("leads")
@@ -77,19 +90,9 @@ async function processLead(lead) {
 }
 
 async function runCycle() {
-  const connection = await checkConnection();
-  whatsappConnected = connection.connected;
-
-  if (!connection.connected) {
-    log(
-      `WhatsApp desconectado (${connection.state}). Conecte em /whatsapp no app. Aguardando...`
-    );
-    return;
-  }
-
   const { data: campaigns, error: campaignsError } = await supabase
     .from("campaigns")
-    .select("id, name")
+    .select("id, name, user_id")
     .eq("status", "active");
 
   if (campaignsError) {
@@ -103,6 +106,23 @@ async function runCycle() {
   }
 
   for (const campaign of campaigns) {
+    const instanceName = await getInstanceForUser(campaign.user_id);
+
+    if (!instanceName) {
+      log(
+        `Campanha "${campaign.name}": operador sem instância WhatsApp. Peça para conectar em /whatsapp.`
+      );
+      continue;
+    }
+
+    const connection = await checkConnection(instanceName);
+    if (!connection.connected) {
+      log(
+        `Campanha "${campaign.name}" (${instanceName}): WhatsApp desconectado (${connection.state}).`
+      );
+      continue;
+    }
+
     const { data: leads, error: leadsError } = await supabase
       .from("leads")
       .select("id, company_name, phone_number")
@@ -124,9 +144,11 @@ async function runCycle() {
       continue;
     }
 
-    log(`Processando ${leads.length} leads da campanha "${campaign.name}"...`);
+    log(
+      `Processando ${leads.length} leads da campanha "${campaign.name}" [${instanceName}]...`
+    );
     for (const lead of leads) {
-      await processLead(lead);
+      await processLead(lead, instanceName);
     }
   }
 }
@@ -141,19 +163,10 @@ process.on("SIGTERM", () => {
 });
 
 async function main() {
-  log("Worker iniciado (Evolution API).", {
+  log("Worker iniciado (Evolution API, multi-operador).", {
     BATCH_SIZE,
     POLL_INTERVAL_MS,
-    instance: process.env.EVOLUTION_INSTANCE,
   });
-
-  const boot = await checkConnection();
-  whatsappConnected = boot.connected;
-  log(
-    boot.connected
-      ? `WhatsApp conectado (${boot.state}).`
-      : `WhatsApp desconectado (${boot.state}). Conecte em /whatsapp.`
-  );
 
   while (running) {
     try {

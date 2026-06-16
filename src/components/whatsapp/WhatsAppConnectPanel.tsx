@@ -117,7 +117,6 @@ export function WhatsAppConnectPanel({
         <CardContent className="space-y-2 font-mono text-xs text-ink-400">
           <p>EVOLUTION_API_URL=https://sua-evolution.com</p>
           <p>EVOLUTION_API_KEY=sua_api_key</p>
-          <p>EVOLUTION_INSTANCE=supra-v4</p>
         </CardContent>
       </Card>
     );
@@ -221,8 +220,8 @@ export function WhatsAppConnectPanel({
               </span>
               <p className="text-lg font-medium text-white">WhatsApp conectado!</p>
               <p className="max-w-xs text-sm text-ink-400">
-                Vá em Campanhas, clique em <strong className="text-ink-200">Iniciar</strong> e
-                rode o worker para começar os disparos.
+                Vá em Campanhas e clique em <strong className="text-ink-200">Iniciar</strong> para
+                começar os disparos.
               </p>
             </div>
           ) : qr.qrBase64 ? (

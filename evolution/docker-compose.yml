@@ -30,15 +30,19 @@ services:
       retries: 10
 
   evolution-api:
-    image: atendai/evolution-api:latest
+    image: evoapicloud/evolution-api:v2.3.7
     container_name: supra-evolution-api
     restart: unless-stopped
     ports:
       - "8080:8080"
     environment:
-      SERVER_URL: http://localhost:8080
-      AUTHENTICATION_API_KEY: sua-chave-secreta
+      SERVER_URL: ${SERVER_URL:-http://localhost:8080}
+      AUTHENTICATION_API_KEY: ${EVOLUTION_API_KEY:-sua-chave-secreta}
       AUTHENTICATION_EXPOSE_IN_FETCH_INSTANCES: "true"
+      # Deixe vazio para buscar versão do WhatsApp automaticamente
+      CONFIG_SESSION_PHONE_VERSION: ""
+      CONFIG_SESSION_PHONE_CLIENT: "Evolution API"
+      CONFIG_SESSION_PHONE_NAME: Chrome
       # Banco de dados
       DATABASE_ENABLED: "true"
       DATABASE_PROVIDER: postgresql
@@ -67,8 +71,7 @@ services:
       SUPABASE_URL: ${SUPABASE_URL}
       SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
       EVOLUTION_API_URL: http://evolution-api:8080
-      EVOLUTION_API_KEY: sua-chave-secreta
-      EVOLUTION_INSTANCE: supra-v4
+      EVOLUTION_API_KEY: ${EVOLUTION_API_KEY:-sua-chave-secreta}
       BATCH_SIZE: "5"
       POLL_INTERVAL_MS: "5000"
       SEND_DELAY_MS: "1200"
