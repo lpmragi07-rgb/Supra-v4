@@ -169,7 +169,9 @@ export function CampaignsTable({
     setPendingId(id);
 
     startTransition(async () => {
-      const result = await toggleCampaignStatus(id, current);
+      const result = await toggleCampaignStatus(id, current, {
+        resetLeads: current === "completed",
+      });
       if (!result.ok) {
         setCampaigns((prev) =>
           prev.map((c) => (c.id === id ? { ...c, status: current } : c))

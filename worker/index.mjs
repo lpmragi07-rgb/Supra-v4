@@ -136,11 +136,41 @@ async function runCycle() {
     }
 
     if (!leads || leads.length === 0) {
+      const { count: totalLeads, error: countError } = await supabase
+        .from("leads")
+        .select("id", { count: "exact", head: true })
+        .eq("campaign_id", campaign.id);
+
+      if (countError) {
+        log(`Erro ao contar leads da campanha ${campaign.name}:`, countError.message);
+        continue;
+      }
+
+      if ((totalLeads ?? 0) === 0) {
+        log(`Campanha "${campaign.name}" sem leads — aguardando importação.`);
+        continue;
+      }
+
+      const { count: sentCount } = await supabase
+        .from("leads")
+        .select("id", { count: "exact", head: true })
+        .eq("campaign_id", campaign.id)
+        .eq("status", "sent");
+
+      const { count: failedCount } = await supabase
+        .from("leads")
+        .select("id", { count: "exact", head: true })
+        .eq("campaign_id", campaign.id)
+        .eq("status", "failed");
+
       await supabase
         .from("campaigns")
         .update({ status: "completed" })
         .eq("id", campaign.id);
-      log(`Campanha "${campaign.name}" concluída.`);
+
+      log(
+        `Campanha "${campaign.name}" concluída (${sentCount ?? 0} enviados, ${failedCount ?? 0} falhas).`
+      );
       continue;
     }
 

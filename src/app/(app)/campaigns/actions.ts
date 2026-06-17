@@ -11,13 +11,13 @@ export interface ActionResult {
 }
 
 // Alterna o status de uma campanha: draft/paused → active, active → paused.
-// (RLS garante que o usuário só altere as próprias campanhas.)
+// Ao reiniciar (completed → active), pode resetar os leads para pending.
 export async function toggleCampaignStatus(
   campaignId: string,
-  current: CampaignStatus
+  current: CampaignStatus,
+  options?: { resetLeads?: boolean }
 ): Promise<ActionResult> {
   if (!isSupabaseConfigured()) {
-    // Modo demonstração: nada a persistir.
     return { ok: true };
   }
 
@@ -25,6 +25,18 @@ export async function toggleCampaignStatus(
     current === "active" ? "paused" : "active";
 
   const supabase = createClient();
+
+  if (next === "active" && options?.resetLeads) {
+    const { error: resetError } = await supabase
+      .from("leads")
+      .update({ status: "pending", error_message: null })
+      .eq("campaign_id", campaignId);
+
+    if (resetError) {
+      return { ok: false, error: resetError.message };
+    }
+  }
+
   const { error } = await supabase
     .from("campaigns")
     .update({ status: next })

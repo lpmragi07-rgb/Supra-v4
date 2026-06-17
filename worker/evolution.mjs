@@ -120,8 +120,17 @@ export async function sendWhatsAppMessage(lead, instanceName) {
       body?.error ??
       body?.message ??
       `Erro HTTP ${status}`;
+    console.error("[worker] Evolution sendText falhou:", { number, status, body });
     return { ok: false, error: String(message) };
   }
 
-  return { ok: true, messageId: body?.key?.id ?? null };
+  if (body?.error) {
+    console.error("[worker] Evolution retornou erro no body:", { number, body });
+    return { ok: false, error: String(body.error) };
+  }
+
+  const messageId = body?.key?.id ?? body?.messageId ?? null;
+  console.log("[worker] Mensagem aceita pela Evolution:", { number, messageId });
+
+  return { ok: true, messageId };
 }
